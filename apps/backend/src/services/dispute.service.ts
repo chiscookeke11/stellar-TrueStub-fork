@@ -263,6 +263,11 @@ export class DisputeService {
     private readonly changelog: ChangelogService = new ChangelogService()
   ) {}
 
+  async getOpenCount(): Promise<number> {
+    const all = this.store.listAll ? await this.store.listAll() : [];
+    return all.filter((dispute) => dispute.state === "OPEN" || dispute.state === "ESCALATED").length;
+  }
+
   /**
    * Opens a new dispute in OPEN state.
    *

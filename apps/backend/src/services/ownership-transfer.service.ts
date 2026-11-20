@@ -56,6 +56,7 @@ export interface OwnershipStore {
    * identical transfer requests (issue #424).
    */
   insertIfAbsent(transferId: string, record: OwnershipTransfer): Promise<void>;
+  countPending?(): Promise<number>;
 }
 
 export const TRANSFER_ERROR_CODES = {
@@ -89,6 +90,10 @@ export class InMemoryOwnershipStore implements OwnershipStore {
       );
     }
     this.store.set(transferId, record);
+  }
+
+  async countPending(): Promise<number> {
+    return Array.from(this.store.values()).filter((transfer) => transfer.state === "PENDING").length;
   }
 
   /** Visible for testing. */
@@ -138,6 +143,10 @@ export class OwnershipTransferService {
   private readonly locks = new Map<string, Lock>();
 
   constructor(private readonly store: OwnershipStore = new InMemoryOwnershipStore()) {}
+
+  async getPendingCount(): Promise<number> {
+    return this.store.countPending ? this.store.countPending() : 0;
+  }
 
   private getLock(transferId: string): Lock {
     if (!this.locks.has(transferId)) {

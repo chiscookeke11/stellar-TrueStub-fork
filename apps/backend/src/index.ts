@@ -22,6 +22,7 @@ import { disputesRouter } from "./routes/disputes";
 // Issue #240 — account deletion / anonymization
 import { usersRouter } from "./routes/users";
 import { startDisputeResolverBalanceMonitor } from "./services/dispute-resolver-balance.service";
+import { adminRouter } from "./routes/admin";
 
 // Initialise Sentry exactly once, before the app is created (#260). All Sentry
 // config lives in lib/sentry.ts.
@@ -50,6 +51,7 @@ export function createApp(): Express {
   app.use("/api/transfers", writeRateLimiter, requireAuth, transfersRouter);
   // #155 — Immutable changelog
   app.use("/api/changelog", requireAuth, changelogRouter);
+  app.use("/api/admin", requireAdmin, adminRouter);
   // #156 — Dispute state machine
   app.use("/api/disputes", writeRateLimiter, requireAuth, disputesRouter);
   // #240 — Account deletion / anonymization
