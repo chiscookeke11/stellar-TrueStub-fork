@@ -154,6 +154,7 @@ export interface RefundStore {
    * a scheduled DELETE WHERE claimed_at < $cutoff.
    */
   cleanupBefore(cutoff: Date): Promise<number>;
+  countPending?(): Promise<number>;
 }
 
 // ── In-memory default store ────────────────────────────────────────────────
@@ -192,6 +193,10 @@ export class InMemoryRefundStore implements RefundStore {
       }
     }
     return removed;
+  }
+
+  async countPending(): Promise<number> {
+    return Array.from(this.store.values()).filter((record) => record.status === "pending").length;
   }
 
   /** Visible for testing — returns the raw map size. */
@@ -309,6 +314,10 @@ export class RefundService {
       }
       throw new AppError(502, REFUND_ERROR_CODES.EXECUTION_FAILED, `Refund ${refundId} could not be executed: ${reason}`);
     }
+  }
+
+  async getPendingCount(): Promise<number> {
+    return this.store.countPending ? this.store.countPending() : 0;
   }
 
   /**
