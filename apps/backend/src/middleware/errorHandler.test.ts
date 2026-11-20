@@ -145,3 +145,31 @@ describe("errorHandler — no internals leaked outside development", () => {
     );
   });
 });
+
+
+describe("errorHandler — financial store implementation details (#597)", () => {
+  it.each([
+    ["/api/refunds/claim", "refund store Map.get failed at InMemoryRefundStore"],
+    ["/api/disputes/d1/escalate", "in-memory dispute store Map.set failed"],
+    ["/api/transfers/t1/accept", "Map iterator failed in ownership transfer store"],
+  ])("does not expose storage internals from %s", async (route, internalMessage) => {
+    const app = express();
+    app.use(express.json());
+    app.post(route, (_req, _res, next) => next(new Error(internalMessage)));
+    app.use(errorHandler);
+
+    const res = await request(app).post(route).send({});
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An unexpected error occurred. Please try again later.",
+      },
+    });
+    expect(res.text).not.toContain("Map");
+    expect(res.text).not.toContain("in-memory");
+    expect(res.text).not.toContain("Store");
+    expect(res.body.error).not.toHaveProperty("stack");
+  });
+});
