@@ -1,3 +1,24 @@
+# Refund, transfer, and dispute storage decision
+
+**Decision:** Store backend-internal refund claims, ownership transfers, and disputes directly in PostgreSQL using the backend's `DATABASE_URL` and `node-pg-migrate` migrations. Do not route these records through Hasura/HasuraService.
+
+**Status:** Accepted design decision; implementation is tracked separately in upstream issues #512, #515, and #517.
+
+These records are consumed and mutated by backend services only. No frontend or other client needs to query them through GraphQL. Direct PostgreSQL access therefore avoids adding a GraphQL/Hasura layer to an internal persistence boundary while keeping schema ownership and migrations alongside the backend code.
+
+The implementation must preserve the guarantees already expected by the services:
+
+- **Refund claims:** a unique `refund_id` (or idempotency key) constraint and an atomic insert/claim operation so two backend instances cannot submit the same refund.
+- **Disputes:** durable state and timestamps, with state transitions persisted atomically and existing transition rules retained.
+- **Ownership transfers:** a unique `transfer_id` constraint and transaction/row-level locking (or a PostgreSQL advisory lock) so initiation, acceptance, and cancellation remain safe across processes.
+- **Operations:** migrations must be reversible where safe, and tests must use a real PostgreSQL test database to prove restart and multi-instance behavior. Store implementation details stay behind the existing service store interfaces.
+
+Hasura remains the GraphQL interface for user-facing application data such as users, listings, ratings, and escrow views. It is not the persistence API for these three backend-only coordination stores.
+
+See [the storage decision record](REFUNDS_TRANSFERS_DISPUTES_STORAGE_DECISION.md) for the alternatives and rationale.
+
+---
+
 # Database Schema
 
 TrueStub uses PostgreSQL for application data and Hasura as its GraphQL API.
